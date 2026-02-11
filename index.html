@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Segwik Invoice</title>
+
+  <!-- Fonts (optional but modern) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome (PDF icon) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+
+  <!-- Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
+  <style>
+    :root{
+      --bg:#ffffff;
+      --ink:#0f172a;
+      --muted:#64748b;
+      --line:#e5e7eb;
+
+      --segwik-blue:#042d60;   /* main */
+      --segwik-orange:#f47a02; /* buttons */
+      --logo-bar:#14699F;      /* logo background */
+
+      --card:#ffffff;
+      --shadow: 0 20px 60px rgba(2, 6, 23, 0.08);
+      --radius: 18px;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      background:#f5f7fa;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:var(--ink);
+    }
+
+    /* A4-ish preview canvas */
+    .page-wrap{
+      padding:24px;
+      display:flex;
+      justify-content:center;
+    }
+    .page{
+      width: 210mm;
+      min-height: 297mm;
+      background: var(--bg);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      position:relative;
+    }
+
+    /* Top brand bar */
+    .brandbar{
+      background: var(--logo-bar);
+      padding: 18px 22px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+    }
+    .brand-left{
+      display:flex;
+      align-items:center;
+      gap:14px;
+      min-width: 0;
+    }
+    .brand-logo{
+      height: 34px;
+      width:auto;
+      display:block;
+    }
+    .brand-meta{
+      color: rgba(255,255,255,0.92);
+      font-size: 12.5px;
+      line-height: 1.25;
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+    }
+    .brand-meta strong{ font-weight:700; color:#fff; }
+
+    .brand-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-shrink:0;
+    }
+    .icon-btn{
+      border: 1px solid rgba(255,255,255,0.28);
+      background: rgba(255,255,255,0.10);
+      color:#fff;
+      width:40px;
+      height:40px;
+      border-radius: 12px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      transition: transform .12s ease, background .12s ease;
+      text-decoration:none;
+    }
+    .icon-btn:hover{ transform: translateY(-1px); background: rgba(255,255,255,0.16); }
+
+    /* Content padding */
+    .content{
+      padding: 22px 22px 18px;
+    }
+
+    /* Top grid: sender + recipient + invoice headline */
+    .top-grid{
+      display:grid;
+      grid-template-columns: 1.05fr 1fr;
+      gap: 16px;
+      margin-top: 4px;
+    }
+
+    .panel{
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+
+    .panel-title{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom: 10px;
+    }
+    .panel-title h3{
+      margin:0;
+      font-size: 13px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--segwik-blue);
+      font-weight: 800;
+    }
+    .pill{
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(4,45,96,0.06);
+      color: var(--segwik-blue);
+      border: 1px solid rgba(4,45,96,0.10);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .kv{
+      display:grid;
+      gap: 6px;
+      font-size: 13.5px;
+      color: var(--ink);
+    }
+    .kv .muted{ color: var(--muted); font-size: 12.5px; }
+    .kv .row{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+    }
+    .kv .label{
+      width: 108px;
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 12.5px;
+    }
+    .kv .val{
+      flex:1;
+      font-weight: 600;
+      color: var(--ink);
+      word-break: break-word;
+    }
+
+    /* Big invoice summary section */
+    .summary{
+      margin-top: 16px;
+      border-radius: 22px;
+      overflow:hidden;
+      border: 1px solid rgba(4,45,96,0.12);
+      background: #E7EBF0;
+    }
+
+    .summary-inner{
+      padding: 18px;
+      display:grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .summary-left h1{
+      margin:0 0 6px 0;
+      font-size: 24px;
+      letter-spacing: -0.02em;
+      color: var(--segwik-blue);
+      font-weight: 900;
+    }
+    .subline{
+      margin:0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .summary-kpis{
+      margin-top: 14px;
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .kpi{
+      border: 1px solid rgba(4,45,96,0.10);
+      border-radius: 16px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.7);
+    }
+    .kpi .k{
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .kpi .v{
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--ink);
+    }
+
+    .pay-card{
+      border-left: 1px dashed rgba(4,45,96,0.18);
+      padding-left: 16px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      gap:12px;
+    }
+
+    .amount-due{
+      border-radius: 18px;
+      padding: 14px 14px 12px;
+      background: rgba(4,45,96,0.06);
+      border: 1px solid rgba(4,45,96,0.10);
+    }
+    .amount-due .label{
+      font-size: 12px;
+      color: var(--segwik-blue);
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 8px;
+    }
+    .amount-due .money{
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: var(--segwik-blue);
+      line-height:1.1;
+    }
+    .amount-due .mini{
+      margin-top: 8px;
+      font-size: 12.5px;
+      color: var(--muted);
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .pay-now{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      width:100%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: var(--segwik-orange);
+      color: #fff;
+      text-decoration:none;
+      font-weight: 900;
+      letter-spacing: .02em;
+      border: 0;
+      cursor:pointer;
+      box-shadow: 0 12px 26px rgba(244,122,2,0.25);
+      transition: transform .12s ease, filter .12s ease;
+    }
+    .pay-now:hover{ transform: translateY(-1px); filter: brightness(1.02); }
+    .pay-now:active{ transform: translateY(0px); }
+
+    /* Line items */
+    .items{
+      margin-top: 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow:hidden;
+    }
+
+    .items-head{
+      padding: 14px 16px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      background: linear-gradient(180deg, rgba(4,45,96,0.05), rgba(4,45,96,0.00));
+      border-bottom: 1px solid var(--line);
+    }
+    .items-head .left{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+    .items-head .title{
+      margin:0;
+      font-size: 14px;
+      font-weight: 900;
+      color: var(--segwik-blue);
+      letter-spacing: .02em;
+    }
+    .items-head .hint{
+      margin:0;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+
+    table{
+      width:100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 13px;
+    }
+    thead th{
+      text-align:left;
+      padding: 12px 14px;
+      color: var(--muted);
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-weight: 900;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+    }
+    tbody td{
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      color: var(--ink);
+      font-weight: 600;
+    }
+    tbody tr:last-child td{ border-bottom: 0; }
+
+    .col-item{ width: 44%; }
+    .col-unit{ width: 12%; }
+    .col-qty{ width: 8%; }
+    .col-disc{ width: 12%; }
+    .col-tax{ width: 12%; }
+    .col-sub{ width: 12%; text-align:right; }
+    tbody td.col-sub{ text-align:right; font-weight: 900; }
+
+    .item-title{
+      font-weight: 800;
+      color: #0b1220;
+      line-height: 1.25;
+    }
+    .item-sub{
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12.5px;
+      font-weight: 600;
+    }
+
+    /* Totals row area */
+    .totals{
+      margin-top: 14px;
+      display:grid;
+      grid-template-columns: 1fr 360px;
+      gap: 12px;
+      align-items:start;
+    }
+    .totals .right{
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      background: #fff;
+    }
+    .totals .row{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:14px;
+      padding: 8px 0;
+      border-bottom: 1px dashed rgba(100,116,139,0.28);
+      font-size: 13.5px;
+      color: var(--ink);
+      font-weight: 700;
+    }
+    .totals .row:last-child{
+      border-bottom: 0;
+      margin-top: 4px;
+      padding-top: 12px;
+      font-size: 15px;
+      font-weight: 900;
+      color: var(--segwik-blue);
+    }
+    .totals .label{ color: var(--muted); font-weight: 800; }
+    .totals .value{ font-weight: 900; }
+
+    .footer{
+      margin-top: 14px;
+      padding: 14px 2px 0;
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:flex-end;
+      color: var(--muted);
+      font-size: 12px;
+      border-top: 1px solid var(--line);
+    }
+    .footer .brand{
+      font-weight: 900;
+      color: rgba(4,45,96,0.85);
+    }
+
+    /* Notes */
+    .notes{
+      margin-top: 14px;
+      border: 1px solid rgba(244,122,2,0.22);
+      border-radius: var(--radius);
+      padding: 14px;
+      background: rgba(244,122,2,0.06);
+    }
+    .notes h4{
+      margin:0 0 6px 0;
+      font-size: 12.5px;
+      text-transform: uppercase;
+      letter-spacing: .10em;
+      font-weight: 900;
+      color: #8a3f00;
+    }
+    .notes p{
+      margin:0;
+      color:#3b2a1f;
+      font-weight: 600;
+      font-size: 13px;
+      line-height: 1.4;
+      white-space: pre-wrap;
+    }
+
+    /* Print / PDF styles */
+    @media print{
+      body{ background:#fff; }
+      .page-wrap{ padding:0; }
+      .page{
+        width:auto;
+        min-height:auto;
+        border-radius: 0;
+        box-shadow: none;
+      }
+      .brand-actions{ display:none !important; }  /* hide print button in the print output */
+      a[href="#"]{ text-decoration:none; }
+    }
+
+    /* Force page size when printing */
+    @page{
+      size: A4;
+      margin: 10mm;
+    }
+
+    /* Responsive preview (still prints A4) */
+    @media (max-width: 980px){
+      .page{ width: 100%; min-height: auto; }
+      .top-grid{ grid-template-columns: 1fr; }
+      .summary-inner{ grid-template-columns: 1fr; }
+      .pay-card{ border-left: 0; padding-left: 0; border-top: 1px dashed rgba(4,45,96,0.18); padding-top: 14px; }
+      .totals{ grid-template-columns: 1fr; }
+      .totals .right{ width:100%; }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app" class="page-wrap">
+    <div class="page" role="document" aria-label="Invoice PDF">
+
+      <!-- Top: Segwik details first -->
+      <header class="brandbar">
+        <div class="brand-left">
+          <img
+            class="brand-logo"
+            src="https://d34hmiuaex7c0.cloudfront.net/2952/uploads/cmaspages/gallery/galleryitem_1765289459792.png"
+            alt="Segwik Logo"
+          />
+          <div class="brand-meta" title="[segwik::Basicinfofield display=account_name]">
+            <strong>[segwik::Basicinfofield display=account_name]</strong><br/>
+            [segwik::Basicinfofield display=bus_phone] · [segwik::Basicinfofield display=bus_email]<br/>
+            [segwik::Basicinfofield display=bus_add], [segwik::Basicinfofield display=city_name], [segwik::Basicinfofield display=state_name] [segwik::Basicinfofield display=zip_name]
+          </div>
+        </div>
+
+        <div class="brand-actions">
+          <!-- Clickable PDF/print icon -->
+          <button class="icon-btn" type="button" @click="printInvoice" aria-label="Print / Save as PDF" title="Print / Save as PDF">
+            <i class="fa-solid fa-file-pdf"></i>
+          </button>
+          <!-- Secondary pay button up top (optional, still functional) -->
+          <a class="icon-btn" href="#" aria-label="Pay Now" title="Pay Now">
+            <i class="fa-solid fa-arrow-right"></i>
+          </a>
+        </div>
+      </header>
+
+      <main class="content">
+
+        <!-- Recipient + invoice meta -->
+        <section class="top-grid">
+          <div class="panel">
+            <div class="panel-title">
+              <h3>Billed To</h3>
+            </div>
+
+            <div class="kv">
+              <div class="row">
+                <div class="label">Name</div>
+                <div class="val">[cust_firstname] [cust_lastname]</div>
+              </div>
+              <div class="row">
+                <div class="label">Company</div>
+                <div class="val">[quote_company_name]</div>
+              </div>
+              <div class="row">
+                <div class="label">Billing Email</div>
+                <div class="val">[billing_contact_primary_email]</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="kv">
+              <div class="row">
+                <div class="label">Invoice ID:</div>
+                <div class="val">[quote_id]</div>
+              </div>
+              <div class="row">
+                <div class="label">Invoice Date</div>
+                <div class="val">[created_on]</div>
+              </div>
+              <div class="row">
+                <div class="label">Due Date</div>
+                <div class="val">[quote_valid]</div>
+              </div>
+              <div class="row">
+                <div class="label">Status</div>
+                <div class="val">Amount Due</div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        <!-- Summary: modern, not a common invoice layout -->
+        <section class="summary" aria-label="Invoice Summary">
+          <div class="summary-inner">
+            <div class="summary-left">
+              <h1>Invoice Summary</h1>
+
+
+              <div class="summary-kpis">
+                <div class="kpi">
+                  <div class="k">Sub Total</div>
+                  <div class="v">$[sub_title]</div>
+                </div>
+                <div class="kpi">
+                  <div class="k">Discount</div>
+                  <div class="v">[discount_in_percentage]% · $[total_discount]</div>
+                </div>
+                <div class="kpi">
+                  <div class="k">Grand Total</div>
+                  <div class="v">$[total_amout]</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="pay-card">
+              <div class="amount-due">
+                <div class="label">Amount Due</div>
+                <div class="money">$[amount_due]</div>
+                <div class="mini">
+                  <span>Due by</span>
+                  <strong>[quote_valid]</strong>
+                </div>
+              </div>
+
+              <!-- Pay Now button required -->
+              <a class="pay-now" href="#" aria-label="Pay Now">
+                <i class="fa-solid fa-bolt"></i>
+                Pay Now
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <!-- Line items table -->
+        <section class="items" aria-label="Line Items">
+          <div class="items-head">
+            <div class="left">
+              <p class="title">Line Items</p>
+            </div>
+            <span class="pill">Invoice ID: [quote_id]</span>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th class="col-item">Item</th>
+                <th class="col-unit">Unit</th>
+                <th class="col-qty">Qty</th>
+                <th class="col-disc">Discount</th>
+                <th class="col-tax">Tax</th>
+                <th class="col-sub">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- 5 line items, using your shortcodes for the data -->
+              <tr v-for="(it, idx) in items" :key="idx">
+                <td class="col-item">
+                  <div class="item-title">{{ it.title }}</div>
+                </td>
+                <td class="col-unit">{{ it.unitPrice }}</td>
+                <td class="col-qty">{{ it.qty }}</td>
+                <td class="col-disc">{{ it.discount }}</td>
+                <td class="col-tax">{{ it.tax }}</td>
+                <td class="col-sub">{{ it.total }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- Totals block -->
+        <section class="totals" aria-label="Totals">
+          <div></div>
+          <div class="right">
+            <div class="row">
+              <span class="label">Sub Total</span>
+              <span class="value">$[sub_title]</span>
+            </div>
+            <div class="row">
+              <span class="label">Discount (%)</span>
+              <span class="value">[discount_in_percentage]%</span>
+            </div>
+            <div class="row">
+              <span class="label">Amount Discounted</span>
+              <span class="value">$[total_discount]</span>
+            </div>
+            <div class="row">
+              <span class="label">Grand Total</span>
+              <span class="value">$[total_amout]</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Notes: only display if there are notes -->
+        <section class="notes" v-if="hasNotes" aria-label="Notes">
+          <h4>Notes</h4>
+          <p>{{ notes }}</p>
+        </section>
+
+
+
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const { createApp } = Vue;
+
+    createApp({
+      data() {
+        return {
+          // If your system outputs an empty string for [comments] when none exist,
+          // this will correctly hide the Notes section.
+          notes: ` [comments] `.trim(),
+
+          // 5 line items, each using your provided shortcodes
+          items: Array.from({ length: 5 }, () => ({
+            title: `[title]`,
+            unitPrice: `$[price]`,
+            qty: `[qty]`,
+            discount: `[discount]`,
+            tax: `[tax]`,
+            total: `$[total]`
+          }))
+        };
+      },
+      computed: {
+        hasNotes() {
+          // Hide notes if empty OR if the shortcode remains unpopulated
+          const n = (this.notes || "").trim();
+          return n.length > 0 && n !== "[comments]";
+        }
+      },
+      methods: {
+        printInvoice() {
+          // Opens the browser print dialog. Users can "Save as PDF".
+          window.print();
+        }
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
