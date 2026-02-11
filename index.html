@@ -387,7 +387,6 @@
       align-items:start;
     }
     .totals .right{
-      border: 1px solid var(--line);
       border-radius: var(--radius);
       padding: 14px;
       background: #fff;
@@ -484,6 +483,15 @@
       .totals{ grid-template-columns: 1fr; }
       .totals .right{ width:100%; }
     }
+
+.notes-empty{
+  margin:0;
+  color: rgba(59,42,31,0.55);
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
   </style>
 </head>
 
@@ -667,11 +675,13 @@
           </div>
         </section>
 
-        <!-- Notes: only display if there are notes -->
-        <section class="notes" v-if="hasNotes" aria-label="Notes">
-          <h4>Notes</h4>
-          <p>{{ notes }}</p>
-        </section>
+
+<section class="notes" aria-label="Notes">
+  <h4>Notes</h4>
+  <p v-if="hasRealNotes">{{ notes }}</p>
+  <p v-else class="notes-empty">[comments]</p>
+</section>
+
 
 
 
